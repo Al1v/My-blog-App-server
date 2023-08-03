@@ -19,6 +19,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { getUserGuard } from 'src/auth/getUser.guard';
+import { Request } from 'express';
+import { CreatePostDto } from './dto/create-post.dto';
 
 @Controller('posts')
 export class PostsController {
@@ -42,16 +44,17 @@ export class PostsController {
 
   @UseGuards(AuthGuard)
   @Post()
-  createPost(@Body() data, @Req() req) {
-    return this.postsService.createPost(req, data);
+  createPost(@Body() dto: CreatePostDto, @Req() req: Request) {
+    console.log(dto)
+    console.log(req)
+    return this.postsService.createPost(req, dto);
   }
 
   @UseGuards(AuthGuard)
   @Patch(':id')
-  editPost(@Body() data, @Param() params: any) {
+  editPost(@Body() dto: CreatePostDto, @Param() params, @Req() req) {
     const { id } = params;
-    console.log('patch');
-    return this.postsService.editPost(id, data);
+    return this.postsService.editPost(id, dto, req);
   }
   @UseGuards(getUserGuard)
   @Get()
@@ -69,7 +72,7 @@ export class PostsController {
 
   @UseGuards(AuthGuard)
   @Delete(':id')
-  deletePost(@Param() params: any) {
-    return this.postsService.deletePost(params.id);
+  deletePost(@Param() params: any, @Req() req) {
+    return this.postsService.deletePost(params.id, req);
   }
 }

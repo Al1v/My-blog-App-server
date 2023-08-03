@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { User } from 'src/users/users.model';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -9,7 +9,6 @@ import { Sequelize } from 'sequelize';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Like } from 'src/likes/likes.model';
-import { resolve } from 'path';
 
 @Injectable()
 export class PostsService {
@@ -60,6 +59,7 @@ export class PostsService {
             ],
           ],
         },
+        order: [[{ model: Comment, as: 'comments' }, 'id', 'DESC']],
       });
       if (post) {
         await post.increment('viewsCount', { by: 1 });
@@ -172,16 +172,22 @@ export class PostsService {
     }
   }
 
-  async deletePost(id) {
+  async deletePost(id, req) {
     try {
       const post = await this.postsRepository.findByPk(id, { raw: true });
+      if (!post) {
+        return;
+      }
+      if (post.userId !== req.user.id) {
+        return new UnauthorizedException();
+      }
       if (post.imageUrl) {
         deleteImage(post.imageUrl);
       }
       const result = await this.postsRepository.destroy({
         where: { id },
       });
-      console.log([result]);
+
       if (result) {
         return { success: true };
       }
@@ -203,7 +209,7 @@ export class PostsService {
         commentsCount: 0,
         userId: req.user.id,
       };
-      console.log({ ...dto, ...additionalData, tags });
+
       const post = await this.postsRepository.create(
         {
           ...dto,
@@ -218,10 +224,17 @@ export class PostsService {
     }
   }
 
-  async editPost(id: number, postData) {
+  async editPost(id: number, dto: CreatePostDto, req) {
     try {
-      const post = await this.postsRepository.findByPk(id, { include: Tag });
-      const receivedTags = postData.tags || [];
+      const post = await this.postsRepository.findByPk(id, {
+        include: Tag,
+      });
+      if (post.dataValues.userId !== req.user.id) {
+        console.log(post.dataValues.userId)
+        console.log(req.user.id)
+        throw new UnauthorizedException();
+      }
+      const receivedTags = dto.tags || [];
       const postTags = post.tags;
       const tagsEdited = checkTagsEdited(postTags, receivedTags);
 
@@ -233,9 +246,9 @@ export class PostsService {
         await this.tagsRepository.bulkCreate(convertedTags);
       }
 
-      post.title = postData.title;
-      post.imageUrl = postData.imageUrl;
-      post.text = postData.text;
+      post.title = dto.title;
+      post.imageUrl = dto.imageUrl;
+      post.text = dto.text;
 
       return await post.save();
     } catch (error) {
