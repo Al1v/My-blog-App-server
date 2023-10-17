@@ -1,26 +1,36 @@
-FROM node:18-alpine AS development
-
-WORKDIR app
-
-COPY package*.json ./
-
-RUN npm install --only=development
-
-COPY ./ ./
-
-RUN npm run build
-
-FROM node:18-alpine AS production
-
-WORKDIR app
-
-COPY package*.json ./
-
-RUN npm install --only=production
-
+FROM node:18-alpine AS install-dependencies
+ 
+WORKDIR /user/src/app
+ 
+COPY package.json package-lock.json ./
+ 
+RUN npm ci --omit=dev
+ 
 COPY . .
-
-COPY --from=development /app/dist ./dist
-
-CMD ["node", "dist/main"]
+ 
+ 
+# Creating a build:
+ 
+FROM node:18-alpine AS create-build
+ 
+WORKDIR /user/src/app
+ 
+COPY --from=install-dependencies /user/src/app ./
+ 
+RUN npm run build
+ 
+USER node
+ 
+ 
+# Running the application:
+ 
+FROM node:18-alpine AS run
+ 
+WORKDIR /user/src/app
+ 
+COPY --from=install-dependencies /user/src/app/node_modules ./node_modules
+COPY --from=create-build /user/src/app/dist ./dist
+COPY package.json ./
+ 
+CMD ["npm", "run", "start:prod"]
 
