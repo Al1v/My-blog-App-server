@@ -7,7 +7,11 @@ jobs:
   EC2-Deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2   
+
       - id: deploy
+        name: Deploy
         uses: Al1v/My-blog-App-server@master
         with:
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
