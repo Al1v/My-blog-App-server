@@ -230,8 +230,6 @@ export class PostsService {
         include: Tag,
       });
       if (post.dataValues.userId !== req.user.id) {
-        console.log(post.dataValues.userId)
-        console.log(req.user.id)
         throw new UnauthorizedException();
       }
       const receivedTags = dto.tags || [];
