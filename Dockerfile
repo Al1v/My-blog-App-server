@@ -1,15 +1,26 @@
-FROM node:18-alpine
+FROM node:18-alpine AS development
 
 WORKDIR app
 
+COPY package*.json ./
+
+RUN npm install --only=development
+
 COPY ./ ./
+
+RUN npm run build
+
+FROM node:18-alpine AS production
+
+WORKDIR app
 
 COPY package*.json ./
 
-RUN npm install
+RUN npm install --only=production
 
-RUN npm install -g @nestjs/cli
+COPY . .
 
-EXPOSE $PORT
+COPY --from=development /app/dist ./dist
 
-CMD npm run start
+CMD ["node", "dist/main"]
+
