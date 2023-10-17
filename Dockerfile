@@ -1,11 +1,13 @@
 FROM node:18-alpine
 
-WORKDIR ./app
+WORKDIR app
+
+COPY ./ ./
 
 COPY package*.json ./
 
 RUN npm install
 
-COPY ./ ./
+EXPOSE $PORT
 
-CMD ["npm", "start"]
+CMD npm run start
